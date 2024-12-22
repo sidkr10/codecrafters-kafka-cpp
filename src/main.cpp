@@ -70,7 +70,7 @@ int main(int argc, char* argv[]) {
     // read from client
     
     int n;
-    char buffer[255];
+    u_int8_t buffer[256];
     n = read(client_fd, &buffer, sizeof(buffer));
 
     if(n > 0) {
@@ -78,19 +78,20 @@ int main(int argc, char* argv[]) {
         int cid;
         ClientMessage clientMsg;
         size_t offset = 0;
-        clientMsg.message_size = htonl((buffer[offset] << 24) | (buffer[offset + 1] << 16) |
-                         (buffer[offset + 2] << 8) | buffer[offset + 3]);
+        clientMsg.message_size = (buffer[offset] << 24) | (buffer[offset + 1] << 16) |
+                         (buffer[offset + 2] << 8) | buffer[offset + 3];
         offset += 4;
-        clientMsg.request_api_key = htonl((buffer[offset] << 8) | buffer[offset +1]);
+        clientMsg.request_api_key = (buffer[offset] << 8) | buffer[offset +1];
         offset += 2;
-        clientMsg.request_api_version = htonl((buffer[offset] << 8) | buffer[offset +1]);
+        clientMsg.request_api_version = (buffer[offset] << 8) | buffer[offset +1];
         offset += 2;
-        clientMsg.correlation_id = htonl((buffer[offset] << 24) | (buffer[offset + 1] << 16) |
-                         (buffer[offset + 2] << 8) | buffer[offset + 3]);
+        clientMsg.correlation_id = (buffer[offset] << 24) | (buffer[offset + 1] << 16) |
+                         (buffer[offset + 2] << 8) | buffer[offset + 3];
         offset += 4;
         
         // write response message to client
-
+        clientMsg.message_size = htonl(clientMsg.message_size);
+        clientMsg.correlation_id = htonl(clientMsg.correlation_id);
         write(client_fd, &clientMsg.message_size, sizeof(clientMsg.message_size));
         write(client_fd, &clientMsg.correlation_id, sizeof(clientMsg.correlation_id));
 
