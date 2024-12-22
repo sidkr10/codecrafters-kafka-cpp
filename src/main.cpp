@@ -58,6 +58,15 @@ int main(int argc, char* argv[]) {
     
     int client_fd = accept(server_fd, reinterpret_cast<struct sockaddr*>(&client_addr), &client_addr_len);
     std::cout << "Client connected\n";
+    
+    int m_size = htonl(5);
+    int cid = htonl(7);
+    
+    write(client_fd, &m_size, 4);
+    write(client_fd, &cid, 4);
+
+    std::cout << "Message sent!\n";
+    
     close(client_fd);
 
     close(server_fd);
