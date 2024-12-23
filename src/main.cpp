@@ -29,7 +29,9 @@ int main(int argc, char* argv[]) {
     // Create a response message with request correlation id
     Socket::ResponseMessage responseMessage;
     responseMessage.message_size = requestMessage.message_size;
-    responseMessage.request_api_version = requestMessage.request_api_version;
+    responseMessage.error_code = 0;
+    if(requestMessage.request_api_version < 0 || requestMessage.request_api_version > 4)
+        responseMessage.error_code = UNSUPPORTED_VERSION;
     responseMessage.correlation_id = requestMessage.correlation_id;
 
     // Write back to client    

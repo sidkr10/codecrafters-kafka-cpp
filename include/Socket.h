@@ -11,6 +11,8 @@
 #include <iostream>
 #include <sys/types.h>
 
+#define UNSUPPORTED_VERSION 35
+
 class Socket
 {
 public:
@@ -25,8 +27,9 @@ public:
     struct ResponseMessage {
         u_int32_t message_size;
         // u_int16_t request_api_key;
-        u_int16_t request_api_version;
+        // u_int16_t request_api_version;
         u_int32_t correlation_id;
+        u_int16_t error_code;
         
         u_int8_t* toBuffer();
     };

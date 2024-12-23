@@ -23,8 +23,9 @@ void Socket::RequestMessage::fromBuffer(const u_int8_t *buffer, size_t buffer_si
 u_int8_t* Socket::ResponseMessage::toBuffer(){
     u_int8_t *buffer = new u_int8_t[sizeof(ResponseMessage)];
     *reinterpret_cast<uint32_t *>(buffer) = htonl(message_size);
-    *reinterpret_cast<u_int16_t *>(buffer + 4) = htons(request_api_version);
-    *reinterpret_cast<int32_t *>(buffer + 6) = htonl(correlation_id);
+    // *reinterpret_cast<u_int16_t *>(buffer + 4) = htons(request_api_version);
+    *reinterpret_cast<int32_t *>(buffer + 4) = htonl(correlation_id);
+    *reinterpret_cast<u_int16_t *>(buffer + 8) = htons(error_code);
     return buffer;
 }
 
@@ -92,6 +93,7 @@ Socket::RequestMessage Socket::readBufferFromClient(int client_fd){
     if(n > 0) {
         requestMessage.fromBuffer(buffer, sizeof(buffer));
     }
+
     return requestMessage;
 }
 
@@ -99,7 +101,9 @@ void Socket::writeBufferToClient(int client_fd, Socket::ResponseMessage &respons
     const u_int8_t *buffer = responseMessage.toBuffer();
     const size_t buffer_size = sizeof(ResponseMessage);
     int n = write(client_fd, buffer, buffer_size);
-    if(n < 0){
+    sleep(5);
+    if(n > 0){
         close(client_fd);
     }
+    delete[] buffer;
 }
