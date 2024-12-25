@@ -3,13 +3,6 @@
 #include <vector>
 #include <Socket.h>
 
-struct ClientMessage {
-    u_int32_t message_size;
-    u_int16_t request_api_key;
-    u_int16_t request_api_version;
-    u_int32_t correlation_id;
-};
-
 int main(int argc, char* argv[]) {
     // Disable output buffering
     std::cout << std::unitbuf;

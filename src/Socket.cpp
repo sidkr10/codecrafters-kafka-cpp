@@ -21,11 +21,24 @@ void Socket::RequestMessage::fromBuffer(const u_int8_t *buffer, size_t buffer_si
 }
 
 u_int8_t* Socket::ResponseMessage::toBuffer(){
-    u_int8_t *buffer = new u_int8_t[sizeof(ResponseMessage)];
-    *reinterpret_cast<uint32_t *>(buffer) = htonl(message_size);
-    // *reinterpret_cast<u_int16_t *>(buffer + 4) = htons(request_api_version);
+    u_int8_t *buffer = new u_int8_t[32];
+
+    uint8_t num_api_keys = 2;
+    int16_t api_key = htons(18);
+    uint8_t tag_buffer = 0;
+    int32_t throttle_time_ms = htonl(0);
+
+    *reinterpret_cast<uint32_t *>(buffer) = htonl(sizeof(int32_t) * 2 + sizeof(int16_t) * 4 + sizeof(uint8_t) * 3);
     *reinterpret_cast<int32_t *>(buffer + 4) = htonl(correlation_id);
-    *reinterpret_cast<u_int16_t *>(buffer + 8) = htons(error_code);
+    *reinterpret_cast<uint16_t *>(buffer + 8) = htons(error_code);
+    *reinterpret_cast<uint8_t *>(buffer + 10) = num_api_keys;
+    *reinterpret_cast<uint16_t *>(buffer + 11) = api_key;
+    *reinterpret_cast<uint16_t *>(buffer + 13) = htons(MIN_SUPPORTED_API_VERSION);
+    *reinterpret_cast<uint16_t *>(buffer + 15) = htons(MAX_SUPPORTED_API_VERSION);
+    *reinterpret_cast<uint8_t *>(buffer + 17) = tag_buffer;
+    *reinterpret_cast<uint32_t *>(buffer + 18) = throttle_time_ms;
+    *reinterpret_cast<uint8_t *>(buffer + 22) = tag_buffer;
+    
     return buffer;
 }
 
@@ -99,9 +112,9 @@ Socket::RequestMessage Socket::readBufferFromClient(int client_fd){
 
 void Socket::writeBufferToClient(int client_fd, Socket::ResponseMessage &responseMessage){
     const u_int8_t *buffer = responseMessage.toBuffer();
-    const size_t buffer_size = sizeof(ResponseMessage);
+    const size_t buffer_size = 32;
     int n = write(client_fd, buffer, buffer_size);
-    sleep(5);
+    sleep(1);
     if(n > 0){
         close(client_fd);
     }
