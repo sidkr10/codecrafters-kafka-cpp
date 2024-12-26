@@ -4,7 +4,7 @@
 #pragma once
 
 #include <netdb.h>
-#include <string>
+#include <string.h>
 #include <unistd.h>
 #include <arpa/inet.h>
 #include <sys/socket.h>
@@ -28,15 +28,37 @@ public:
         void fromBuffer(const u_int8_t *buffer, size_t buffer_size);
     };
 
+    // API Version Entry
+    struct ApiVersion {
+        uint16_t api_key;
+        uint16_t min_supported_version = htons(MIN_SUPPORTED_API_VERSION);
+        uint16_t max_supported_version = htons(MAX_SUPPORTED_API_VERSION);
+        uint8_t tag_buffer = 0;
+
+        // Serialize to buffer
+        void toBuffer(std::vector<uint8_t>& buffer) const;
+    };
+
+    // API Versions Response Body
+    struct ApiVersionsResponseBody {
+        uint16_t error_code;
+        uint8_t api_arr_len;
+        std::vector<ApiVersion> api_versions;
+        uint32_t throttle_time = htonl(0);
+        uint8_t tag_buffer = 0;
+
+        // Serialize to buffer
+        void toBuffer(std::vector<uint8_t>& buffer) const;
+    };
 
     struct ResponseMessage {
         u_int32_t message_size;
         u_int32_t correlation_id;
-        u_int16_t error_code;
-        u_int16_t api_key;
+        ApiVersionsResponseBody response_body;
 
-        u_int8_t* toBuffer();
+        void toBuffer(std::vector<u_int8_t>& buffer) const;
     };
+
     Socket();
     ~Socket();
 
