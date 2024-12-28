@@ -42,16 +42,20 @@ int KafkaServer::handleClient(int client_fd)
 
         Socket::ApiVersion api_version1;
         api_version1.api_key = htons(18);
+        Socket::ApiVersion api_version2;
+        api_version2.api_key = htons(75);
+        api_version2.min_supported_version = htons(0);
+        api_version2.max_supported_version = htons(4);
 
         responseBody.api_versions.push_back(api_version1);
+        responseBody.api_versions.push_back(api_version2);
+
         responseBody.error_code = (requestMessage.request_api_version < 0 || requestMessage.request_api_version > 4) ? htons(UNSUPPORTED_VERSION) : htons(0);
         responseMessage.response_body = responseBody;
 
         // Write back to client
         socket.writeBufferToClient(client_fd, responseMessage);
     }
-    if(client_fd != -1)
-        close(client_fd);
-    return 0;
+    return 1;
 }
 
