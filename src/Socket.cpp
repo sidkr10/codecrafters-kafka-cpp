@@ -11,59 +11,6 @@ Socket::~Socket()
     }
 }
 
-void Socket::RequestMessage::fromBuffer(const u_int8_t *buffer, size_t buffer_size)
-{
-    if (buffer_size < sizeof(RequestMessage))
-    {
-        std::cerr << "Client message size is invalid\n";
-    }
-    request_api_key = ntohs(*reinterpret_cast<const u_int16_t *>(buffer));
-    request_api_version = ntohs(*reinterpret_cast<const u_int16_t *>(buffer + 2));
-    correlation_id = ntohl(*reinterpret_cast<const u_int32_t *>(buffer + 4));
-    std::cerr << message_size << " " << correlation_id << "\n";
-}
-
-void Socket::ApiVersion::toBuffer(std::vector<uint8_t> &buffer) const
-{
-    size_t offset = buffer.size();
-    buffer.resize(offset + 7);
-    memcpy(buffer.data() + offset, &api_key, sizeof(uint16_t));
-    offset += sizeof(api_key);
-    memcpy(buffer.data() + offset, &min_supported_version, sizeof(uint16_t));
-    offset += sizeof(min_supported_version);
-    memcpy(buffer.data() + offset, &max_supported_version, sizeof(uint16_t));
-    offset += sizeof(max_supported_version);
-    memcpy(buffer.data() + offset, &tag_buffer, sizeof(uint8_t));
-}
-
-void Socket::ApiVersionsResponseBody::toBuffer(std::vector<uint8_t> &buffer) const
-{
-    size_t offset = buffer.size();
-    buffer.resize(offset + sizeof(uint16_t) + sizeof(uint8_t));
-    memcpy(buffer.data() + offset, &error_code, sizeof(uint16_t));
-    offset += sizeof(error_code);
-    memcpy(buffer.data() + offset, &api_arr_len, sizeof(uint8_t));
-
-    for (const auto &version : api_versions)
-    {
-        version.toBuffer(buffer);
-        offset = buffer.size();
-    }
-
-    buffer.resize(offset + sizeof(uint32_t) + sizeof(uint8_t));
-    memcpy(buffer.data() + offset, &throttle_time, sizeof(uint32_t));
-    offset += sizeof(throttle_time);
-    memcpy(buffer.data() + offset, &tag_buffer, sizeof(uint8_t));
-}
-
-void Socket::ResponseMessage::toBuffer(std::vector<u_int8_t> &buffer) const
-{
-    size_t offset = buffer.size() + 4;
-    buffer.resize(sizeof(uint32_t) + sizeof(uint32_t));
-    memcpy(buffer.data() + offset, &correlation_id, sizeof(uint32_t));
-    response_body.toBuffer(buffer);
-}
-
 int Socket::createSocket()
 {
     server_fd = socket(AF_INET, SOCK_STREAM, 0);
@@ -128,38 +75,32 @@ int Socket::acceptConnection()
     return client_fd;
 }
 
-Socket::RequestMessage Socket::readBufferFromClient(int client_fd)
+uint8_t* Socket::readBufferFromClient(int client_fd)
 {
     uint32_t message_len;
     int n = read(client_fd, &message_len, sizeof(message_len));
-    RequestMessage requestMessage;
-    size_t buffer_size = ntohl(message_len);
+    uint8_t* requestMessage;
     if(n <= 0) {
-        requestMessage.message_size = 0;
-        return requestMessage;
+        return 0;
     }
-    requestMessage.message_size = buffer_size;
-    ssize_t bytes_read;
-    u_int8_t buffer[buffer_size];
-    bytes_read = recv(client_fd, &buffer, buffer_size,0);
+    size_t buffer_size = ntohl(message_len);
+    requestMessage = new uint8_t[buffer_size];
+    size_t bytes_read;
+    bytes_read = recv(client_fd, requestMessage, buffer_size,0);
 
     if(bytes_read != buffer_size) {
-        requestMessage.message_size = 0;
+        std::cerr << "Request Body does not match the message size!\n";
+        delete[] requestMessage;
+        return 0;
     }
-    requestMessage.fromBuffer(buffer,buffer_size);
+    
     return requestMessage;
 }
 
-void Socket::writeBufferToClient(int client_fd, ResponseMessage &responseMessage)
+void Socket::writeBufferToClient(int client_fd, const uint8_t *buffer, size_t &buffer_size)
 {
-    std::vector<uint8_t> buffer;
-    buffer.reserve(1024);
-    size_t offset = buffer.size();
-    uint8_t api_arr_len = responseMessage.response_body.api_versions.size() + 1;
-    responseMessage.response_body.api_arr_len = api_arr_len;
-    responseMessage.toBuffer(buffer);
-    responseMessage.message_size = htonl(buffer.size() - 4);
-    memcpy(buffer.data() + offset, &(responseMessage.message_size), sizeof(uint32_t));
-    ssize_t bytes_sent = send(client_fd, buffer.data(), buffer.size(), 0);
-    
+    size_t bytes_sent = send(client_fd, buffer, buffer_size, 0);
+    if(bytes_sent != buffer_size){
+        std::cerr << "Error when sending message.\n";
+    }
 }
